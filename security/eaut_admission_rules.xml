@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Thí sinh (portal) chỉ thấy hồ sơ của chính mình -->
+    <record id="rule_application_portal" model="ir.rule">
+        <field name="name">Hồ sơ xét tuyển: thí sinh chỉ xem hồ sơ của mình</field>
+        <field name="model_id" ref="model_eaut_admission_application"/>
+        <field name="domain_force">[('partner_id', '=', user.partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+    <record id="rule_choice_portal" model="ir.rule">
+        <field name="name">Nguyện vọng: thí sinh chỉ xem của mình</field>
+        <field name="model_id" ref="model_eaut_admission_choice"/>
+        <field name="domain_force">[('application_id.partner_id', '=', user.partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+    <record id="rule_document_portal" model="ir.rule">
+        <field name="name">Tài liệu: thí sinh chỉ xem của mình</field>
+        <field name="model_id" ref="model_eaut_admission_document"/>
+        <field name="domain_force">[('application_id.partner_id', '=', user.partner_id.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+
+    <!-- Cán bộ phòng đào tạo xem toàn bộ hồ sơ -->
+    <record id="rule_application_officer" model="ir.rule">
+        <field name="name">Hồ sơ xét tuyển: cán bộ xem tất cả</field>
+        <field name="model_id" ref="model_eaut_admission_application"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+    </record>
+    <record id="rule_choice_officer" model="ir.rule">
+        <field name="name">Nguyện vọng: cán bộ xem tất cả</field>
+        <field name="model_id" ref="model_eaut_admission_choice"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+    </record>
+    <record id="rule_document_officer" model="ir.rule">
+        <field name="name">Tài liệu: cán bộ xem tất cả</field>
+        <field name="model_id" ref="model_eaut_admission_document"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+    </record>
+
+    <!-- Cán bộ đọc được chiến dịch / lead / đơn xét tuyển CRM gắn với hồ sơ (không phụ thuộc team CRM) -->
+    <record id="rule_crm_campaign_admission_officer" model="ir.rule">
+        <field name="name">Chiến dịch tuyển sinh: cán bộ phòng đào tạo được đọc</field>
+        <field name="model_id" ref="eaut_crm.model_eaut_crm_admission_campaign"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_crm_lead_admission_officer" model="ir.rule">
+        <field name="name">Lead: cán bộ phòng đào tạo được đọc lead của hồ sơ</field>
+        <field name="model_id" ref="eaut_crm.model_eaut_crm_lead"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+    <record id="rule_crm_registration_admission_officer" model="ir.rule">
+        <field name="name">Đơn xét tuyển: cán bộ phòng đào tạo được đọc đơn của hồ sơ</field>
+        <field name="model_id" ref="eaut_crm.model_eaut_crm_registration"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

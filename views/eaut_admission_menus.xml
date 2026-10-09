@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="eaut_admission_menu_root"
+              name="Hồ sơ tuyển sinh"
+              sequence="30"
+              groups="eaut_admission.group_admission_officer"/>
+
+    <menuitem id="eaut_admission_menu_application"
+              name="Hồ sơ xét tuyển"
+              parent="eaut_admission_menu_root"
+              action="eaut_admission_application_action"
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Cán bộ phòng đào tạo: kiểm tra, yêu cầu bổ sung, chấp nhận/từ chối hồ sơ -->
+    <record id="group_admission_officer" model="res.groups">
+        <field name="name">Tuyển sinh: Cán bộ phòng đào tạo</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <!-- Trưởng phòng: toàn quyền, kể cả xóa hồ sơ -->
+    <record id="group_admission_manager" model="res.groups">
+        <field name="name">Tuyển sinh: Quản lý</field>
+        <field name="implied_ids" eval="[(4, ref('group_admission_officer'))]"/>
+    </record>
+</odoo>

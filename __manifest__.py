@@ -2,22 +2,32 @@
 {
     'name': 'Eaut Admission',
     'version': '1.0',
-    'summary': 'Brief description of the module',
+    'summary': 'Cổng tuyển sinh: thí sinh nộp hồ sơ xét tuyển trên portal, phòng đào tạo kiểm tra và duyệt',
     'description': '''
-        Detailed description of the module
+        Mở rộng eaut_crm cho cổng portal tuyển sinh:
+        - Thí sinh đăng ký tài khoản, nhập thông tin cá nhân, upload học bạ / căn cước / VNeID, chọn nguyện vọng.
+        - Trạng thái hồ sơ: Cập nhật thông tin -> Hoàn thành hồ sơ -> Đang kiểm tra -> Đã hoàn thành.
+        - Phòng đào tạo kiểm tra, yêu cầu bổ sung, chấp nhận / từ chối hồ sơ.
+        - Hồ sơ được chấp nhận: đóng học phí để nhận giấy xác nhận nhập học (điều kiện đỗ tốt nghiệp).
     ''',
-    'category': 'Uncategorized',
-    'author': '',
-    'company': '',
-    'maintainer': '',
+    'category': 'Services',
+    'author': 'EAUT',
+    'company': 'EAUT',
+    'maintainer': 'EAUT',
     'website': '',
-    'depends': ['base', 'mail'],
+    'depends': ['base', 'mail', 'portal', 'eaut_crm'],
     'data': [
+        'security/eaut_admission_groups.xml',
         'security/ir.model.access.csv',
-        'views/eaut_admission_views.xml',
+        'security/eaut_admission_rules.xml',
+        'data/eaut_admission_data.xml',
+        'views/eaut_admission_application_views.xml',
+        'views/eaut_admission_menus.xml',
+        'views/portal_templates.xml',
+        'report/eaut_admission_report.xml',
     ],
     'license': 'LGPL-3',
     'installable': True,
-    'application': False,
+    'application': True,
     'auto_install': False,
 }
