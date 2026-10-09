@@ -9,11 +9,6 @@
             <field name="company_id" eval="False"/>
         </record>
 
-        <!-- Nguồn Lead cho thí sinh tự đăng ký trên cổng portal -->
-        <record id="crm_source_portal" model="eaut.crm.source">
-            <field name="name">Cổng thông tin tuyển sinh (Portal)</field>
-        </record>
-
         <!-- Email xác nhận đã nhận hồ sơ + nút theo dõi -->
         <record id="mail_template_application_received" model="mail.template">
             <field name="name">Tuyển sinh: Xác nhận đã nhận hồ sơ</field>
@@ -29,7 +24,7 @@
         (<t t-out="object.campaign_id.name or ''"/>) của bạn.
         Hồ sơ sẽ được phòng đào tạo kiểm tra và thông báo kết quả qua email này.
     </p>
-    <p>Bạn có thể xem lại thông tin đã gửi, theo dõi trạng thái và trao đổi với nhà trường tại trang theo dõi hồ sơ:</p>
+    <p>Bạn có thể xem lại thông tin đã nộp, theo dõi trạng thái và trao đổi với nhà trường tại trang theo dõi hồ sơ:</p>
     <p style="margin: 16px 0;">
         <a t-att-href="object.get_tracking_url()"
            style="background-color: #875A7B; padding: 10px 18px; text-decoration: none; color: #ffffff; border-radius: 5px; display: inline-block;">
@@ -37,7 +32,7 @@
         </a>
     </p>
     <p style="color: #888888; font-size: 12px;">
-        Vui lòng không chia sẻ email này cho người khác vì đường dẫn cho phép xem và cập nhật hồ sơ của bạn.
+        Vui lòng không chia sẻ email này cho người khác vì đường dẫn cho phép xem hồ sơ của bạn.
     </p>
 </div>
             </field>
