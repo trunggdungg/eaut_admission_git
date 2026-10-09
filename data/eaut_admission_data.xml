@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_eaut_admission_application" model="ir.sequence">
+            <field name="name">Hồ sơ xét tuyển</field>
+            <field name="code">eaut.admission.application</field>
+            <field name="prefix">HS%(year)s-</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <!-- Nguồn Lead cho thí sinh tự đăng ký trên cổng portal -->
+        <record id="crm_source_portal" model="eaut.crm.source">
+            <field name="name">Cổng thông tin tuyển sinh (Portal)</field>
+        </record>
+
+        <!-- Email xác nhận đã nhận hồ sơ + nút theo dõi -->
+        <record id="mail_template_application_received" model="mail.template">
+            <field name="name">Tuyển sinh: Xác nhận đã nhận hồ sơ</field>
+            <field name="model_id" ref="model_eaut_admission_application"/>
+            <field name="subject">Đã nhận hồ sơ xét tuyển {{ object.name }}</field>
+            <field name="email_to">{{ object.email }}</field>
+            <field name="auto_delete" eval="True"/>
+            <field name="body_html" type="html">
+                <div style="margin: 0; padding: 0; font-size: 14px;">
+                    <p>Chào<t t-out="object.full_name or ''"/>,
+                    </p>
+                    <p>
+                        Nhà trường đã nhận được hồ sơ xét tuyển
+                        <strong t-out="object.name"/>
+                        (<t t-out="object.campaign_id.name or ''"/>) của bạn.
+                        Hồ sơ sẽ được phòng đào tạo kiểm tra và thông báo kết quả qua email này.
+                    </p>
+                    <p>Bạn có thể xem lại thông tin đã gửi, theo dõi trạng thái và trao đổi với nhà trường tại trang
+                        theo dõi hồ sơ:
+                    </p>
+                    <p style="margin: 16px 0;">
+                        <a t-att-href="object._get_tracking_url()"
+                           style="background-color: #875A7B; padding: 10px 18px; text-decoration: none; color: #ffffff; border-radius: 5px; display: inline-block;">
+                            Theo dõi hồ sơ
+                        </a>
+                    </p>
+                    <p style="color: #888888; font-size: 12px;">
+                        Vui lòng không chia sẻ email này cho người khác vì đường dẫn cho phép xem và cập nhật hồ sơ của
+                        bạn.
+                    </p>
+                </div>
+            </field>
+        </record>
+    </data>
+</odoo>

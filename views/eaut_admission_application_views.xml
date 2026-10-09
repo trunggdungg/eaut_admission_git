@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="eaut_admission_application_view_form" model="ir.ui.view">
+        <field name="name">eaut.admission.application.view.form</field>
+        <field name="model">eaut.admission.application</field>
+        <field name="arch" type="xml">
+            <form string="Hồ sơ xét tuyển">
+                <header>
+                    <button name="action_start_review" string="Bắt đầu kiểm tra" type="object"
+                            class="btn-primary" invisible="state != 'completed'"/>
+                    <button name="action_accept" string="Chấp nhận hồ sơ" type="object"
+                            class="btn-primary" invisible="state != 'reviewing'"
+                            confirm="Chấp nhận hồ sơ và gửi thông báo cho thí sinh?"/>
+                    <button name="action_reject" string="Từ chối" type="object"
+                            invisible="state != 'reviewing'"
+                            confirm="Từ chối hồ sơ và gửi thông báo cho thí sinh?"/>
+                    <button name="action_request_supplement" string="Yêu cầu bổ sung" type="object"
+                            invisible="state not in ('completed', 'reviewing')"/>
+                    <button name="action_mark_paid" string="Xác nhận đã đóng học phí" type="object"
+                            invisible="state != 'done' or result != 'accepted' or payment_state == 'paid'"/>
+                    <button name="action_confirm_graduation" string="Xác nhận đỗ tốt nghiệp" type="object"
+                            invisible="state != 'done' or result != 'accepted' or graduation_status == 'passed'"/>
+                    <button name="action_print_admission_letter" string="In giấy xác nhận nhập học"
+                            type="object" class="btn-primary" invisible="not admission_letter_available"/>
+                    <button name="action_send_tracking_email" string="Gửi lại email theo dõi" type="object"
+                            invisible="not email"/>
+                    <button name="action_reset_to_draft" string="Đưa về cập nhật thông tin" type="object"
+                            invisible="state == 'draft'" groups="eaut_admission.group_admission_manager"
+                            confirm="Đưa hồ sơ về trạng thái cập nhật thông tin?"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_lead" type="object" class="oe_stat_button"
+                                icon="fa-user" invisible="not lead_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Lead CRM</span>
+                            </div>
+                        </button>
+                        <button name="action_view_submissions" type="object" class="oe_stat_button"
+                                icon="fa-history" invisible="not submission_count">
+                            <field name="submission_count" widget="statinfo" string="Lần gửi form"/>
+                        </button>
+                        <button name="action_view_registrations" type="object" class="oe_stat_button"
+                                icon="fa-graduation-cap" invisible="not registration_count">
+                            <field name="registration_count" widget="statinfo" string="Đơn xét tuyển"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Chấp nhận" bg_color="text-bg-success"
+                            invisible="result != 'accepted'"/>
+                    <widget name="web_ribbon" title="Từ chối" bg_color="text-bg-danger"
+                            invisible="result != 'rejected'"/>
+                    <field name="active" invisible="1"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                        <h2>
+                            <field name="full_name" placeholder="Họ và tên thí sinh"/>
+                        </h2>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id"/>
+                            <field name="campaign_id"/>
+                            <field name="reviewer_id"/>
+                            <field name="lead_id"/>
+                            <field name="campaign_form_id"/>
+                        </group>
+                        <group>
+                            <field name="submitted_date"/>
+                            <field name="review_date"/>
+                            <field name="done_date"/>
+                            <field name="company_id" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-warning" role="alert" invisible="state != 'draft' or is_complete">
+                        <strong>Hồ sơ còn thiếu:</strong>
+                        <field name="missing_items" nolabel="1"/>
+                    </div>
+                    <field name="is_complete" invisible="1"/>
+                    <notebook>
+                        <page string="Thông tin cá nhân" name="personal">
+                            <group>
+                                <group>
+                                    <field name="date_of_birth"/>
+                                    <field name="gender"/>
+                                    <field name="phone" widget="phone"/>
+                                    <field name="email" widget="email"/>
+                                </group>
+                                <group>
+                                    <field name="school_name"/>
+                                    <field name="graduation_year"/>
+                                    <field name="address"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Căn cước &amp; VNeID" name="identity">
+                            <group>
+                                <group string="Căn cước công dân">
+                                    <field name="id_number"/>
+                                    <field name="id_issue_date"/>
+                                    <field name="id_issue_place"/>
+                                </group>
+                                <group string="VNeID">
+                                    <field name="vneid_account"/>
+                                    <field name="vneid_level"/>
+                                    <field name="vneid_verified"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Nguyện vọng" name="choices">
+                            <field name="choice_ids">
+                                <list editable="bottom">
+                                    <field name="priority"/>
+                                    <field name="program_id"/>
+                                    <field name="method_id"/>
+                                    <field name="combination_id"/>
+                                    <field name="score"/>
+                                    <field name="verified_score"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Tài liệu" name="documents">
+                            <field name="document_ids">
+                                <list editable="bottom">
+                                    <field name="doc_type"/>
+                                    <field name="file" filename="file_name" widget="binary"/>
+                                    <field name="file_name" column_invisible="1"/>
+                                    <field name="check_state" widget="badge"
+                                           decoration-success="check_state == 'valid'"
+                                           decoration-danger="check_state == 'invalid'"
+                                           decoration-warning="check_state == 'pending'"/>
+                                    <field name="check_note"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Kết quả &amp; học phí" name="result">
+                            <group>
+                                <group string="Kết quả hồ sơ">
+                                    <field name="result"/>
+                                    <field name="supplement_request"
+                                           placeholder="Nội dung cần thí sinh bổ sung (bắt buộc khi bấm 'Yêu cầu bổ sung')"/>
+                                    <field name="result_message"
+                                           placeholder="Thông báo gửi thí sinh (bắt buộc khi từ chối; để trống khi chấp nhận sẽ dùng nội dung mặc định)"/>
+                                </group>
+                                <group string="Học phí &amp; nhập học">
+                                    <field name="tuition_amount"/>
+                                    <field name="payment_state"/>
+                                    <field name="payment_date"/>
+                                    <field name="payment_reference"/>
+                                    <field name="graduation_status"/>
+                                    <field name="admission_letter_available"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Ghi chú nội bộ" name="note">
+                            <field name="internal_note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="eaut_admission_application_view_list" model="ir.ui.view">
+        <field name="name">eaut.admission.application.view.list</field>
+        <field name="model">eaut.admission.application</field>
+        <field name="arch" type="xml">
+            <list string="Hồ sơ xét tuyển"
+                  decoration-success="result == 'accepted'" decoration-danger="result == 'rejected'">
+                <field name="name"/>
+                <field name="full_name"/>
+                <field name="phone"/>
+                <field name="campaign_id"/>
+                <field name="submitted_date" optional="show"/>
+                <field name="reviewer_id" optional="show"/>
+                <field name="state" widget="badge"/>
+                <field name="result" optional="show"/>
+                <field name="payment_state" optional="hide"/>
+                <field name="graduation_status" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="eaut_admission_application_view_search" model="ir.ui.view">
+        <field name="name">eaut.admission.application.view.search</field>
+        <field name="model">eaut.admission.application</field>
+        <field name="arch" type="xml">
+            <search string="Hồ sơ xét tuyển">
+                <field name="name"/>
+                <field name="full_name"/>
+                <field name="phone"/>
+                <field name="id_number"/>
+                <field name="campaign_id"/>
+                <filter string="Cập nhật thông tin" name="filter_draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Hoàn thành hồ sơ (chờ kiểm tra)" name="filter_completed"
+                        domain="[('state', '=', 'completed')]"/>
+                <filter string="Đang kiểm tra" name="filter_reviewing" domain="[('state', '=', 'reviewing')]"/>
+                <filter string="Đã hoàn thành" name="filter_done" domain="[('state', '=', 'done')]"/>
+                <separator/>
+                <filter string="Được chấp nhận" name="filter_accepted" domain="[('result', '=', 'accepted')]"/>
+                <filter string="Không chấp nhận" name="filter_rejected" domain="[('result', '=', 'rejected')]"/>
+                <filter string="Chưa đóng học phí" name="filter_unpaid"
+                        domain="[('result', '=', 'accepted'), ('payment_state', '=', 'unpaid')]"/>
+                <filter string="Của tôi" name="filter_mine" domain="[('reviewer_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Lưu trữ" name="filter_archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter string="Trạng thái" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Chiến dịch" name="group_campaign" context="{'group_by': 'campaign_id'}"/>
+                    <filter string="Cán bộ kiểm tra" name="group_reviewer" context="{'group_by': 'reviewer_id'}"/>
+                    <filter string="Kết quả" name="group_result" context="{'group_by': 'result'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="eaut_admission_application_action" model="ir.actions.act_window">
+        <field name="name">Hồ sơ xét tuyển</field>
+        <field name="res_model">eaut.admission.application</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_filter_completed': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Chưa có hồ sơ xét tuyển nào</p>
+            <p>Hồ sơ được tạo khi thí sinh đăng ký tài khoản và nộp hồ sơ trên cổng portal.</p>
+        </field>
+    </record>
+</odoo>

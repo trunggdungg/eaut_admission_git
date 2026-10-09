@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="eaut_admission_submission_view_list" model="ir.ui.view">
+        <field name="name">eaut.admission.submission.view.list</field>
+        <field name="model">eaut.admission.submission</field>
+        <field name="arch" type="xml">
+            <list string="Lượt gửi form" create="0" edit="0" decoration-warning="email_differs">
+                <field name="application_id"/>
+                <field name="name"/>
+                <field name="submitted_at"/>
+                <field name="submit_type" widget="badge"/>
+                <field name="full_name"/>
+                <field name="phone"/>
+                <field name="email"/>
+                <field name="email_differs" optional="show"/>
+                <field name="form_id" optional="show"/>
+                <field name="ip_address" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="eaut_admission_submission_view_form" model="ir.ui.view">
+        <field name="name">eaut.admission.submission.view.form</field>
+        <field name="model">eaut.admission.submission</field>
+        <field name="arch" type="xml">
+            <form string="Lượt gửi form" create="0" edit="0">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="application_id"/> - <field name="name"/></h1>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not email_differs">
+                        Email của lượt gửi này khác email đang lưu trong hồ sơ.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="submit_type"/>
+                            <field name="submitted_at"/>
+                            <field name="form_id"/>
+                            <field name="ip_address"/>
+                        </group>
+                        <group>
+                            <field name="full_name"/>
+                            <field name="phone"/>
+                            <field name="email"/>
+                            <field name="email_differs" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Thông tin đã gửi">
+                        <field name="summary" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="eaut_admission_submission_view_search" model="ir.ui.view">
+        <field name="name">eaut.admission.submission.view.search</field>
+        <field name="model">eaut.admission.submission</field>
+        <field name="arch" type="xml">
+            <search string="Lượt gửi form">
+                <field name="application_id"/>
+                <field name="full_name"/>
+                <field name="phone"/>
+                <field name="email"/>
+                <filter string="Gửi lại form (trùng)" name="filter_duplicate" domain="[('submit_type', '=', 'duplicate')]"/>
+                <filter string="Email khác hồ sơ" name="filter_email_differs" domain="[('email_differs', '=', True)]"/>
+                <group>
+                    <filter string="Hồ sơ" name="group_application" context="{'group_by': 'application_id'}"/>
+                    <filter string="Loại lượt gửi" name="group_type" context="{'group_by': 'submit_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="eaut_admission_submission_action" model="ir.actions.act_window">
+        <field name="name">Lượt gửi form</field>
+        <field name="res_model">eaut.admission.submission</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
