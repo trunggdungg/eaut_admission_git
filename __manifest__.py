@@ -22,6 +22,7 @@
         'security/eaut_admission_rules.xml',
         'data/eaut_admission_data.xml',
         'views/eaut_admission_application_views.xml',
+        'views/eaut_admission_submission_views.xml',
         'views/eaut_admission_menus.xml',
         'views/portal_templates.xml',
         'report/eaut_admission_report.xml',

@@ -40,6 +40,13 @@
         <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
     </record>
 
+    <record id="rule_submission_officer" model="ir.rule">
+        <field name="name">Lượt gửi form: cán bộ xem tất cả</field>
+        <field name="model_id" ref="model_eaut_admission_submission"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_admission_officer'))]"/>
+    </record>
+
     <!-- Cán bộ đọc được chiến dịch / lead / đơn xét tuyển CRM gắn với hồ sơ (không phụ thuộc team CRM) -->
     <record id="rule_crm_campaign_admission_officer" model="ir.rule">
         <field name="name">Chiến dịch tuyển sinh: cán bộ phòng đào tạo được đọc</field>

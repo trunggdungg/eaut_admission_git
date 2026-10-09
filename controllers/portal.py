@@ -9,17 +9,12 @@ from odoo.exceptions import AccessError, MissingError, UserError, ValidationErro
 from odoo.http import request, route
 from odoo.addons.portal.controllers.portal import CustomerPortal
 
-from ..models.eaut_admission_application import STATES
+from ..models.eaut_admission_application import PERSONAL_FIELDS, STATES
 from ..models.eaut_admission_document import (
     ALLOWED_EXTENSIONS, DOC_TYPES, MAX_FILE_SIZE, SINGLE_DOC_TYPES,
 )
 
-# Các trường thông tin cá nhân (thí sinh nhập trên form / sửa khi được yêu cầu bổ sung)
-EDITABLE_FIELDS = [
-    'full_name', 'date_of_birth', 'gender', 'phone', 'email', 'address',
-    'school_name', 'graduation_year', 'id_number', 'id_issue_date',
-    'id_issue_place', 'vneid_account', 'vneid_level',
-]
+EDITABLE_FIELDS = PERSONAL_FIELDS
 DATE_FIELDS = ('date_of_birth', 'id_issue_date')
 REQUIRED_FORM_FIELDS = ['full_name', 'phone', 'email']
 # Giới hạn số tệp mỗi lần nộp để tránh lạm dụng form công khai
@@ -202,6 +197,9 @@ class EautAdmissionPortal(CustomerPortal):
         ], limit=1)
         if existing:
             # Đã có hồ sơ: chỉ gửi lại link theo dõi vào email đã lưu, không tiết lộ dữ liệu
+            existing._log_submission(
+                'duplicate', form=form, vals=vals, choices=choices, documents=documents,
+                ip=request.httprequest.remote_addr)
             existing._send_tracking_email()
             return self._render_submitted(existing.name, existing.email)
 
@@ -216,6 +214,9 @@ class EautAdmissionPortal(CustomerPortal):
                 document_ids=[(0, 0, d) for d in documents],
             ))
             app.action_submit()
+            app._log_submission(
+                'new', form=form, vals=vals, choices=choices, documents=documents,
+                ip=request.httprequest.remote_addr)
             created['app'] = app
 
         try:
@@ -419,7 +420,11 @@ class EautAdmissionPortal(CustomerPortal):
         app, redirect = self._get_editable_application(app_id, access_token)
         if redirect:
             return redirect
-        if self._run_safely(app.action_submit):
+        def _resubmit():
+            app.action_submit()
+            app._log_submission('resubmit', ip=request.httprequest.remote_addr)
+
+        if self._run_safely(_resubmit):
             self._flash(_("Hồ sơ đã được gửi lại tới nhà trường. Vui lòng chờ kiểm tra."))
         return self._back(app, access_token)
 

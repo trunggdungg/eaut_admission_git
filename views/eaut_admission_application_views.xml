@@ -35,6 +35,10 @@
                                 icon="fa-user" invisible="not lead_id">
                             <div class="o_stat_info"><span class="o_stat_text">Lead CRM</span></div>
                         </button>
+                        <button name="action_view_submissions" type="object" class="oe_stat_button"
+                                icon="fa-history" invisible="not submission_count">
+                            <field name="submission_count" widget="statinfo" string="Lần gửi form"/>
+                        </button>
                         <button name="action_view_registrations" type="object" class="oe_stat_button"
                                 icon="fa-graduation-cap" invisible="not registration_count">
                             <field name="registration_count" widget="statinfo" string="Đơn xét tuyển"/>

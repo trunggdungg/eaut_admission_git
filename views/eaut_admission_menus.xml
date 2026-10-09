@@ -10,4 +10,10 @@
               parent="eaut_admission_menu_root"
               action="eaut_admission_application_action"
               sequence="10"/>
+
+    <menuitem id="eaut_admission_menu_submission"
+              name="Lượt gửi form"
+              parent="eaut_admission_menu_root"
+              action="eaut_admission_submission_action"
+              sequence="20"/>
 </odoo>
