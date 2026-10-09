@@ -23,7 +23,7 @@ ACCEPTED_MESSAGE = (
 class EautAdmissionApplication(models.Model):
     _name = 'eaut.admission.application'
     _description = 'Hồ sơ xét tuyển'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'portal.mixin']
     _order = 'id desc'
 
     MAX_CHOICES = 5
@@ -35,11 +35,11 @@ class EautAdmissionApplication(models.Model):
 
     partner_id = fields.Many2one(
         'res.partner',
-        string='Tài khoản thí sinh',
-        required=True,
+        string='Liên hệ thí sinh',
         index=True,
         ondelete='restrict',
         tracking=True,
+        help='Tự tạo theo email khi thí sinh nộp hồ sơ; dùng để gửi thông báo và nhận trao đổi.',
     )
     campaign_id = fields.Many2one(
         'eaut.crm.admission.campaign',
@@ -48,6 +48,13 @@ class EautAdmissionApplication(models.Model):
         tracking=True,
         ondelete='restrict',
         domain=[('active', '=', True)],
+    )
+    campaign_form_id = fields.Many2one(
+        'eaut.crm.admission.campaign.form',
+        string='Form tuyển sinh',
+        ondelete='restrict',
+        copy=False,
+        help='Form mà thí sinh đã dùng để nộp hồ sơ; quyết định nguồn Lead.',
     )
     lead_id = fields.Many2one(
         'eaut.crm.lead',
@@ -146,14 +153,25 @@ class EautAdmissionApplication(models.Model):
         compute='_compute_admission_letter_available',
     )
 
-    _partner_campaign_unique = models.Constraint(
-        'unique(partner_id, campaign_id)',
-        'Mỗi tài khoản chỉ được nộp một hồ sơ cho mỗi chiến dịch tuyển sinh!',
+    _phone_campaign_unique = models.Constraint(
+        'unique(phone, campaign_id)',
+        'Số điện thoại này đã có hồ sơ trong chiến dịch tuyển sinh!',
     )
 
     # =========================================================
     # COMPUTE
     # =========================================================
+
+    def _compute_access_url(self):
+        super()._compute_access_url()
+        for rec in self:
+            rec.access_url = '/my/admission/%s' % rec.id
+
+    def _get_tracking_url(self):
+        """Link theo dõi đầy đủ (kèm token) gửi cho thí sinh qua email."""
+        self.ensure_one()
+        rec = self.sudo()
+        return rec.get_base_url() + rec.get_portal_url()
 
     @api.depends(
         'full_name', 'date_of_birth', 'gender', 'phone', 'email', 'address', 'school_name',
@@ -266,6 +284,10 @@ class EautAdmissionApplication(models.Model):
             if not vals.get('name') or vals['name'] == 'New':
                 vals['name'] = self.env['ir.sequence'].next_by_code('eaut.admission.application') or 'New'
         records = super().create(vals_list)
+        for rec in records.sudo():
+            rec._ensure_partner()
+            rec._portal_ensure_token()
+            rec._subscribe_staff(rec.campaign_id.sale_team_id.leader_id)
         records._ensure_lead()
         return records
 
@@ -282,11 +304,31 @@ class EautAdmissionApplication(models.Model):
     # LIÊN KẾT VỚI CRM
     # =========================================================
 
+    def _ensure_partner(self):
+        """Gắn liên hệ (res.partner) theo email; chưa có thì tạo mới. Không ghi đè liên hệ cũ."""
+        Partner = self.env['res.partner'].sudo()
+        for rec in self.filtered(lambda a: not a.partner_id and a.email):
+            partner = Partner.search([('email', '=ilike', rec.email)], limit=1)
+            if not partner:
+                partner = Partner.create({
+                    'name': rec.full_name or rec.email,
+                    'email': rec.email,
+                    'phone': rec.phone,
+                })
+            rec.partner_id = partner
+
+    def _subscribe_staff(self, users):
+        """Cán bộ theo dõi hồ sơ để nhận thông báo khi thí sinh trao đổi trên portal."""
+        partners = users.partner_id
+        if partners:
+            self.message_subscribe(partner_ids=partners.ids)
+
     def _ensure_lead(self):
         """Tìm Lead theo SĐT (chưa có thì tạo) để phòng tuyển sinh theo dõi trong CRM."""
         Lead = self.env['eaut.crm.lead'].sudo()
-        source = self.env.ref('eaut_admission.crm_source_portal', raise_if_not_found=False)
+        portal_source = self.env.ref('eaut_admission.crm_source_portal', raise_if_not_found=False)
         for rec in self.sudo().filtered(lambda a: not a.lead_id and a.phone):
+            source = rec.campaign_form_id.default_source_id or portal_source
             lead = Lead.search([('phone', '=', rec.phone)], limit=1)
             if not lead:
                 vals = {
@@ -319,7 +361,7 @@ class EautAdmissionApplication(models.Model):
         """Mỗi nguyện vọng tương ứng 1 đơn xét tuyển (eaut.crm.registration) trong CRM."""
         Registration = self.env['eaut.crm.registration'].sudo()
         for rec in self.sudo().filtered('lead_id'):
-            form = rec.campaign_id.admission_form_ids.filtered('active')[:1]
+            form = rec.campaign_form_id or rec.campaign_id.admission_form_ids.filtered('active')[:1]
             for choice in rec.choice_ids:
                 vals = {
                     'lead_id': rec.lead_id.id,
@@ -384,6 +426,27 @@ class EautAdmissionApplication(models.Model):
         self._ensure_lead()
         self._sync_lead_info()
         self._sync_registrations()
+        self._send_tracking_email()
+
+    def _send_tracking_email(self):
+        """Email xác nhận đã nhận hồ sơ, kèm nút 'Theo dõi hồ sơ' (link có token)."""
+        template = self.env.ref('eaut_admission.mail_template_application_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self.sudo().filtered('email'):
+            template.sudo().send_mail(rec.id, force_send=True, email_layout_xmlid='mail.mail_notification_light')
+
+    def action_send_tracking_email(self):
+        """Gửi lại email theo dõi (khi thí sinh làm mất email hoặc nhập sai email)."""
+        for rec in self:
+            if not rec.email:
+                raise UserError(_("Hồ sơ %s chưa có email thí sinh.") % rec.name)
+        self._send_tracking_email()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {'message': _("Đã gửi email theo dõi hồ sơ."), 'type': 'success', 'sticky': False},
+        }
 
     def action_start_review(self):
         self._check_state(['completed'])
@@ -392,6 +455,7 @@ class EautAdmissionApplication(models.Model):
             'review_date': fields.Datetime.now(),
             'reviewer_id': self.env.user.id,
         })
+        self._subscribe_staff(self.env.user)
 
     def action_request_supplement(self):
         """Trả hồ sơ về cho thí sinh bổ sung; bắt buộc ghi rõ nội dung cần bổ sung."""

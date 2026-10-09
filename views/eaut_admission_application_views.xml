@@ -22,6 +22,8 @@
                             invisible="state != 'done' or result != 'accepted' or graduation_status == 'passed'"/>
                     <button name="action_print_admission_letter" string="In giấy xác nhận nhập học"
                             type="object" class="btn-primary" invisible="not admission_letter_available"/>
+                    <button name="action_send_tracking_email" string="Gửi lại email theo dõi" type="object"
+                            invisible="not email"/>
                     <button name="action_reset_to_draft" string="Đưa về cập nhật thông tin" type="object"
                             invisible="state == 'draft'" groups="eaut_admission.group_admission_manager"
                             confirm="Đưa hồ sơ về trạng thái cập nhật thông tin?"/>
@@ -53,6 +55,7 @@
                             <field name="campaign_id"/>
                             <field name="reviewer_id"/>
                             <field name="lead_id"/>
+                            <field name="campaign_form_id"/>
                         </group>
                         <group>
                             <field name="submitted_date"/>

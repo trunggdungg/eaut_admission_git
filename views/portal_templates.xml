@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Ô "Hồ sơ tuyển sinh" ở trang chủ portal -->
-    <template id="portal_my_home_admission" name="Portal: Hồ sơ tuyển sinh" customize_show="True"
-              inherit_id="portal.portal_my_home" priority="30">
-        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
-            <t t-call="portal.portal_docs_entry">
-                <t t-set="title">Hồ sơ tuyển sinh</t>
-                <t t-set="url" t-value="'/my/admission'"/>
-                <t t-set="text">Đăng ký xét tuyển, tải hồ sơ và theo dõi kết quả</t>
-                <t t-set="placeholder_count" t-value="'admission_count'"/>
-            </t>
-        </xpath>
-    </template>
-
     <!-- Thông báo sau thao tác -->
     <template id="portal_admission_flash" name="Portal tuyển sinh: thông báo">
         <div t-if="flash" t-attf-class="alert alert-#{flash['level']} mt-3" role="alert">
@@ -20,51 +7,204 @@
         </div>
     </template>
 
-    <!-- Danh sách hồ sơ -->
-    <template id="portal_admission_list" name="Portal tuyển sinh: danh sách hồ sơ">
+    <!-- Các ô thông tin cá nhân dùng chung cho form công khai và trang theo dõi (vals: dict chuỗi) -->
+    <template id="admission_personal_fields" name="Tuyển sinh: ô thông tin cá nhân">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label" for="full_name">Họ và tên</label>
+                <input type="text" class="form-control" name="full_name" id="full_name" t-att-value="vals.get('full_name')" required="required"/>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="date_of_birth">Ngày sinh</label>
+                <input type="date" class="form-control" name="date_of_birth" id="date_of_birth" t-att-value="vals.get('date_of_birth')"/>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="gender">Giới tính</label>
+                <select class="form-select" name="gender" id="gender">
+                    <option value="">--</option>
+                    <option value="male" t-att-selected="vals.get('gender') == 'male'">Nam</option>
+                    <option value="female" t-att-selected="vals.get('gender') == 'female'">Nữ</option>
+                    <option value="other" t-att-selected="vals.get('gender') == 'other'">Khác</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="phone">Số điện thoại</label>
+                <input type="tel" class="form-control" name="phone" id="phone" t-att-value="vals.get('phone')" pattern="[0-9+]{10,12}" required="required"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" class="form-control" name="email" id="email" t-att-value="vals.get('email')" required="required"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="graduation_year">Năm tốt nghiệp THPT</label>
+                <input type="number" class="form-control" name="graduation_year" id="graduation_year" t-att-value="vals.get('graduation_year')"/>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="school_name">Trường THPT</label>
+                <input type="text" class="form-control" name="school_name" id="school_name" t-att-value="vals.get('school_name')"/>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" for="address">Địa chỉ liên hệ</label>
+                <input type="text" class="form-control" name="address" id="address" t-att-value="vals.get('address')"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="id_number">Số căn cước công dân (12 số)</label>
+                <input type="text" class="form-control" name="id_number" id="id_number" t-att-value="vals.get('id_number')" pattern="[0-9]{12}"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="id_issue_date">Ngày cấp</label>
+                <input type="date" class="form-control" name="id_issue_date" id="id_issue_date" t-att-value="vals.get('id_issue_date')"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="id_issue_place">Nơi cấp</label>
+                <input type="text" class="form-control" name="id_issue_place" id="id_issue_place" t-att-value="vals.get('id_issue_place')"/>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label" for="vneid_account">Tài khoản VNeID (số định danh cá nhân)</label>
+                <input type="text" class="form-control" name="vneid_account" id="vneid_account" t-att-value="vals.get('vneid_account')"/>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="vneid_level">Mức định danh điện tử</label>
+                <select class="form-select" name="vneid_level" id="vneid_level">
+                    <option value="">--</option>
+                    <option value="1" t-att-selected="vals.get('vneid_level') == '1'">Mức 1</option>
+                    <option value="2" t-att-selected="vals.get('vneid_level') == '2'">Mức 2</option>
+                </select>
+            </div>
+        </div>
+    </template>
+
+
+    <!-- Danh sách đợt tuyển sinh đang mở -->
+    <template id="admission_apply_list" name="Tuyển sinh: chọn đợt đăng ký">
         <t t-call="portal.portal_layout">
-            <div class="container mb-5">
-                <h3 class="mt-3">Hồ sơ tuyển sinh của tôi</h3>
-                <t t-call="eaut_admission.portal_admission_flash"/>
-
-                <div t-if="not applications and not available_campaigns" class="alert alert-info mt-3">
-                    Hiện chưa có đợt tuyển sinh nào đang mở nhận hồ sơ.
+            <div class="container py-5" style="max-width: 720px;">
+                <h1 class="h3 mb-4">Đăng ký xét tuyển</h1>
+                <div t-if="not campaigns" class="alert alert-info">Hiện chưa có đợt tuyển sinh nào đang mở nhận hồ sơ.</div>
+                <div class="list-group">
+                    <t t-foreach="campaigns" t-as="c">
+                        <a t-attf-href="/admission/apply/#{c.admission_form_ids.filtered('active')[:1].token}"
+                           class="list-group-item list-group-item-action">
+                            <strong t-out="c.name"/> <span class="text-muted">(<t t-out="c.year"/>)</span>
+                        </a>
+                    </t>
                 </div>
+            </div>
+        </t>
+    </template>
 
-                <div t-if="applications" class="list-group mt-3">
-                    <a t-foreach="applications" t-as="a" t-attf-href="/my/admission/#{a.id}"
-                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                        <span>
-                            <strong t-out="a.name"/> - <span t-out="a.campaign_id.name"/>
-                            <br/>
-                            <small class="text-muted" t-out="a.full_name"/>
-                        </span>
-                        <span t-attf-class="badge #{'text-bg-success' if a.result == 'accepted' else 'text-bg-danger' if a.result == 'rejected' else 'text-bg-primary'}"
-                              t-out="states[a.state]"/>
-                    </a>
-                </div>
+    <template id="admission_apply_closed" name="Tuyển sinh: form đã đóng">
+        <t t-call="portal.portal_layout">
+            <div class="container py-5 text-center" style="max-width: 620px;">
+                <div class="alert alert-warning">Form đăng ký này hiện không còn nhận hồ sơ.</div>
+                <a href="/admission/apply">Xem các đợt tuyển sinh đang mở</a>
+            </div>
+        </t>
+    </template>
 
-                <div t-if="available_campaigns" class="card mt-4">
-                    <div class="card-header">Đăng ký xét tuyển mới</div>
-                    <div class="card-body">
-                        <form action="/my/admission/create" method="post">
-                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                            <div class="mb-3">
-                                <label class="form-label" for="campaign_id">Đợt tuyển sinh</label>
-                                <select name="campaign_id" id="campaign_id" class="form-select" required="required">
-                                    <option t-foreach="available_campaigns" t-as="c" t-att-value="c.id">
-                                        <t t-out="c.name"/> (<t t-out="c.year"/>)
-                                    </option>
-                                </select>
+    <!-- Form nộp hồ sơ công khai -->
+    <template id="admission_apply_form" name="Tuyển sinh: form nộp hồ sơ">
+        <t t-call="portal.portal_layout">
+            <div class="container py-5" style="max-width: 860px;">
+                <h1 class="h3 mb-1" t-out="form.website_title or 'Đăng ký xét tuyển'"/>
+                <p class="text-muted" t-out="form.website_description"/>
+                <p class="text-muted"><t t-out="form.campaign_id.name"/></p>
+                <div t-if="error" class="alert alert-danger" role="alert" style="white-space: pre-line;" t-out="error"/>
+                <form t-attf-action="/admission/apply/#{form.token}/submit" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <!-- Ô bẫy bot, ẩn với người dùng -->
+                    <div style="position:absolute; left:-9999px;" aria-hidden="true">
+                        <input type="text" name="website_url" tabindex="-1" autocomplete="off"/>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">1. Thông tin cá nhân, căn cước và VNeID</div>
+                        <div class="card-body">
+                            <t t-call="eaut_admission.admission_personal_fields"/>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">2. Nguyện vọng xét tuyển (tối đa <t t-out="max_choices"/>)</div>
+                        <div class="card-body">
+                            <div t-foreach="range(1, max_choices + 1)" t-as="n" class="row g-2 mb-2">
+                                <div class="col-md-1 pt-2">NV<t t-out="n"/></div>
+                                <div class="col-md-3">
+                                    <select t-attf-name="program_id_#{n}" class="form-select">
+                                        <option value="">Ngành học</option>
+                                        <option t-foreach="programs" t-as="p" t-att-value="p.id"
+                                                t-att-selected="vals.get('program_id_%s' % n) == str(p.id)">
+                                            <t t-out="p.name"/> (<t t-out="p.code"/>)
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select t-attf-name="method_id_#{n}" class="form-select">
+                                        <option value="">Phương thức</option>
+                                        <option t-foreach="methods" t-as="m" t-att-value="m.id" t-out="m.name"
+                                                t-att-selected="vals.get('method_id_%s' % n) == str(m.id)"/>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select t-attf-name="combination_id_#{n}" class="form-select">
+                                        <option value="">Tổ hợp (nếu có)</option>
+                                        <option t-foreach="combinations" t-as="c" t-att-value="c.id" t-out="c.name"
+                                                t-att-selected="vals.get('combination_id_%s' % n) == str(c.id)"/>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" step="0.01" min="0" max="30" t-attf-name="score_#{n}"
+                                           class="form-control" placeholder="Điểm"
+                                           t-att-value="vals.get('score_%s' % n)"/>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="phone">Số điện thoại liên hệ</label>
-                                <input type="tel" name="phone" id="phone" class="form-control" required="required"
-                                       pattern="[0-9+]{10,12}" t-att-value="default_phone"
-                                       placeholder="0912345678"/>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">3. Tài liệu (học bạ, căn cước, VNeID...)</div>
+                        <div class="card-body">
+                            <div t-foreach="doc_types" t-as="dt" class="mb-3">
+                                <label class="form-label" t-attf-for="file_#{dt[0]}">
+                                    <t t-out="dt[1]"/>
+                                    <span t-if="dt[0] in ('transcript', 'id_front', 'id_back', 'vneid')" class="text-danger">*</span>
+                                </label>
+                                <input type="file" class="form-control" t-attf-id="file_#{dt[0]}" t-attf-name="file_#{dt[0]}"
+                                       t-att-accept="allowed_extensions"
+                                       t-att-multiple="None if dt[0] in single_doc_types else 'multiple'"/>
                             </div>
-                            <button type="submit" class="btn btn-primary">Tạo hồ sơ</button>
-                        </form>
+                            <div class="form-text">
+                                Định dạng <t t-out="allowed_extensions"/>, tối đa <t t-out="max_file_mb"/> MB mỗi tệp.
+                                Mục có dấu <span class="text-danger">*</span> là bắt buộc.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success btn-lg">Gửi hồ sơ</button>
+                    </div>
+                </form>
+            </div>
+        </t>
+    </template>
+
+    <!-- Sau khi gửi hồ sơ -->
+    <template id="admission_submitted" name="Tuyển sinh: đã gửi hồ sơ">
+        <t t-call="portal.portal_layout">
+            <div class="container py-5 text-center" style="max-width: 620px;">
+                <div class="card shadow-sm border-0" style="border-radius: 16px;">
+                    <div class="card-body p-4 p-md-5">
+                        <i class="fa fa-paper-plane fa-3x text-success mb-3" role="img" aria-label="Đã gửi"/>
+                        <h1 class="h3">Hồ sơ của bạn đã được gửi</h1>
+                        <p t-if="application_name" class="text-muted mb-1">
+                            Mã hồ sơ: <strong t-out="application_name"/>
+                        </p>
+                        <p class="text-muted" t-if="email_hint">
+                            Nhà trường đã gửi email theo dõi hồ sơ tới <strong t-out="email_hint"/>.
+                            Bấm nút <strong>Theo dõi hồ sơ</strong> trong email để xem trạng thái, kết quả và trao đổi với nhà trường.
+                        </p>
+                        <p class="text-muted small">Nếu không thấy email, hãy kiểm tra hộp thư rác (spam).</p>
+                        <a href="/">Về trang chủ</a>
                     </div>
                 </div>
             </div>
@@ -75,13 +215,7 @@
     <template id="portal_admission_detail" name="Portal tuyển sinh: chi tiết hồ sơ">
         <t t-call="portal.portal_layout">
             <div class="container mb-5">
-                <nav aria-label="breadcrumb" class="mt-3">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="/my/admission">Hồ sơ tuyển sinh</a></li>
-                        <li class="breadcrumb-item active" t-out="app.name"/>
-                    </ol>
-                </nav>
-                <h3><span t-out="app.name"/> - <span t-out="app.campaign_id.name"/></h3>
+                                <h3><span t-out="app.name"/> - <span t-out="app.campaign_id.name"/></h3>
 
                 <t t-call="eaut_admission.portal_admission_flash"/>
 
@@ -129,7 +263,7 @@
                         Tốt nghiệp THPT:
                         <strong t-out="dict(app._fields['graduation_status'].selection)[app.graduation_status]"/>
                     </p>
-                    <a t-if="app.admission_letter_available" t-attf-href="/my/admission/#{app.id}/letter"
+                    <a t-if="app.admission_letter_available" t-attf-href="/my/admission/#{app.id}/letter?access_token=#{access_token}"
                        class="btn btn-success mt-2">Tải giấy xác nhận nhập học</a>
                     <p t-else="" class="small mt-2 mb-0">
                         Giấy xác nhận nhập học sẽ được cấp khi bạn đã đóng học phí và đỗ tốt nghiệp THPT.
@@ -143,71 +277,10 @@
                 <!-- 1. Thông tin cá nhân, căn cước, VNeID -->
                 <form t-attf-action="/my/admission/#{app.id}/save" method="post" class="card mb-4">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                     <div class="card-header">1. Thông tin cá nhân, căn cước và VNeID</div>
                     <fieldset class="card-body" t-att-disabled="None if editable else 'disabled'">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="full_name">Họ và tên</label>
-                                <input type="text" class="form-control" name="full_name" id="full_name" t-att-value="app.full_name" required="required"/>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" for="date_of_birth">Ngày sinh</label>
-                                <input type="date" class="form-control" name="date_of_birth" id="date_of_birth" t-att-value="app.date_of_birth"/>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" for="gender">Giới tính</label>
-                                <select class="form-select" name="gender" id="gender">
-                                    <option value="">--</option>
-                                    <option value="male" t-att-selected="app.gender == 'male'">Nam</option>
-                                    <option value="female" t-att-selected="app.gender == 'female'">Nữ</option>
-                                    <option value="other" t-att-selected="app.gender == 'other'">Khác</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="phone">Số điện thoại</label>
-                                <input type="tel" class="form-control" name="phone" id="phone" t-att-value="app.phone" pattern="[0-9+]{10,12}"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="email">Email</label>
-                                <input type="email" class="form-control" name="email" id="email" t-att-value="app.email"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="graduation_year">Năm tốt nghiệp THPT</label>
-                                <input type="number" class="form-control" name="graduation_year" id="graduation_year" t-att-value="app.graduation_year or ''"/>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="school_name">Trường THPT</label>
-                                <input type="text" class="form-control" name="school_name" id="school_name" t-att-value="app.school_name"/>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="address">Địa chỉ liên hệ</label>
-                                <input type="text" class="form-control" name="address" id="address" t-att-value="app.address"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="id_number">Số căn cước công dân (12 số)</label>
-                                <input type="text" class="form-control" name="id_number" id="id_number" t-att-value="app.id_number" pattern="[0-9]{12}"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="id_issue_date">Ngày cấp</label>
-                                <input type="date" class="form-control" name="id_issue_date" id="id_issue_date" t-att-value="app.id_issue_date"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="id_issue_place">Nơi cấp</label>
-                                <input type="text" class="form-control" name="id_issue_place" id="id_issue_place" t-att-value="app.id_issue_place"/>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="form-label" for="vneid_account">Tài khoản VNeID (số định danh cá nhân)</label>
-                                <input type="text" class="form-control" name="vneid_account" id="vneid_account" t-att-value="app.vneid_account"/>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="vneid_level">Mức định danh điện tử</label>
-                                <select class="form-select" name="vneid_level" id="vneid_level">
-                                    <option value="">--</option>
-                                    <option value="1" t-att-selected="app.vneid_level == '1'">Mức 1</option>
-                                    <option value="2" t-att-selected="app.vneid_level == '2'">Mức 2</option>
-                                </select>
-                            </div>
-                        </div>
+                        <t t-call="eaut_admission.admission_personal_fields"/>
                         <button t-if="editable" type="submit" class="btn btn-primary mt-3">Lưu thông tin</button>
                     </fieldset>
                 </form>
@@ -234,6 +307,7 @@
                                             <form t-if="editable" method="post"
                                                   t-attf-action="/my/admission/#{app.id}/choice/#{choice.id}/delete">
                                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
                                             </form>
                                         </td>
@@ -246,6 +320,7 @@
                         <form t-if="editable and len(app.choice_ids) &lt; max_choices" method="post"
                               t-attf-action="/my/admission/#{app.id}/choice/add" class="row g-2 mt-2">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                             <div class="col-md-3">
                                 <select name="program_id" class="form-select" required="required">
                                     <option value="">Ngành học</option>
@@ -290,7 +365,7 @@
                                     <tr t-foreach="app.document_ids" t-as="doc">
                                         <td t-out="dict(doc_types)[doc.doc_type]"/>
                                         <td>
-                                            <a t-attf-href="/my/admission/#{app.id}/document/#{doc.id}/download"
+                                            <a t-attf-href="/my/admission/#{app.id}/document/#{doc.id}/download?access_token=#{access_token}"
                                                t-out="doc.file_name"/>
                                         </td>
                                         <td>
@@ -304,6 +379,7 @@
                                             <form t-if="editable" method="post"
                                                   t-attf-action="/my/admission/#{app.id}/document/#{doc.id}/delete">
                                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
                                             </form>
                                         </td>
@@ -316,6 +392,7 @@
                         <form t-if="editable" method="post" enctype="multipart/form-data"
                               t-attf-action="/my/admission/#{app.id}/upload" class="row g-2 mt-2">
                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                             <div class="col-md-4">
                                 <select name="doc_type" class="form-select" required="required">
                                     <option value="">Loại giấy tờ</option>
@@ -337,13 +414,22 @@
                     </div>
                 </div>
 
+                <!-- 5. Trao đổi với nhà trường -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="h5 mb-3">Trao đổi với nhà trường</h2>
+                        <t t-call="portal.message_thread"/>
+                    </div>
+                </div>
+
                 <!-- 4. Hoàn thành hồ sơ -->
                 <form t-if="editable" method="post" t-attf-action="/my/admission/#{app.id}/submit"
                       class="text-end"
-                      onsubmit="return confirm('Sau khi hoàn thành, bạn không thể chỉnh sửa hồ sơ cho đến khi nhà trường phản hồi. Tiếp tục?');">
+                      onsubmit="return confirm('Sau khi gửi lại, bạn không thể chỉnh sửa hồ sơ cho đến khi nhà trường phản hồi. Tiếp tục?');">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+<input type="hidden" name="access_token" t-att-value="access_token"/>
                     <button type="submit" class="btn btn-success btn-lg" t-att-disabled="'disabled' if missing else None">
-                        Hoàn thành hồ sơ
+                        Gửi lại hồ sơ
                     </button>
                 </form>
             </div>
