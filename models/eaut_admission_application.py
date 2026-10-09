@@ -178,7 +178,7 @@ class EautAdmissionApplication(models.Model):
         for rec in self:
             rec.access_url = '/my/admission/%s' % rec.id
 
-    def _get_tracking_url(self):
+    def get_tracking_url(self):
         """Link theo dõi đầy đủ (kèm token) gửi cho thí sinh qua email."""
         self.ensure_one()
         rec = self.sudo()
@@ -282,6 +282,16 @@ class EautAdmissionApplication(models.Model):
     # CRUD
     # =========================================================
 
+    def _assert_phone_unique(self, phone, campaign_id, exclude_ids=()):
+        """Báo lỗi thân thiện trước khi SQL unique(phone, campaign_id) làm hỏng giao dịch."""
+        if not phone or not campaign_id:
+            return
+        duplicate = self.sudo().with_context(active_test=False).search_count([
+            ('phone', '=', phone), ('campaign_id', '=', campaign_id), ('id', 'not in', list(exclude_ids)),
+        ])
+        if duplicate:
+            raise ValidationError(_("Số điện thoại %s đã có hồ sơ trong chiến dịch tuyển sinh này.") % phone)
+
     @api.model
     def _normalize_vals(self, vals):
         if vals.get('phone'):
@@ -297,6 +307,7 @@ class EautAdmissionApplication(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             self._normalize_vals(vals)
+            self._assert_phone_unique(vals.get('phone'), vals.get('campaign_id'))
             if not vals.get('name') or vals['name'] == 'New':
                 vals['name'] = self.env['ir.sequence'].next_by_code('eaut.admission.application') or 'New'
         records = super().create(vals_list)
@@ -309,6 +320,10 @@ class EautAdmissionApplication(models.Model):
 
     def write(self, vals):
         self._normalize_vals(vals)
+        if 'phone' in vals or 'campaign_id' in vals:
+            for rec in self:
+                self._assert_phone_unique(
+                    vals.get('phone', rec.phone), vals.get('campaign_id', rec.campaign_id.id), rec.ids)
         res = super().write(vals)
         if 'phone' in vals:
             # Đổi SĐT: gỡ liên kết lead cũ rồi tìm/tạo lead theo SĐT mới

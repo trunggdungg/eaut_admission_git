@@ -141,6 +141,13 @@ class EautAdmissionPortal(CustomerPortal):
         return values
 
     @staticmethod
+    def _to_int(value):
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
     def _mask_email(email):
         name, _at, domain = (email or '').partition('@')
         return '%s***@%s' % (name[:2], domain) if domain else ''
@@ -237,17 +244,26 @@ class EautAdmissionPortal(CustomerPortal):
             if not program_id or not method_id:
                 raise ValidationError(
                     _("Nguyện vọng %s cần chọn đủ ngành học và phương thức xét tuyển.") % index)
+            env = request.env
+            program = env['eaut.crm.admission.program'].sudo().search(
+                [('id', '=', self._to_int(program_id)), ('active', '=', True)])
+            method = env['eaut.crm.admission.method'].sudo().search(
+                [('id', '=', self._to_int(method_id)), ('active', '=', True)])
+            combination = env['eaut.crm.admission.combination'].sudo().search(
+                [('id', '=', self._to_int(post.get('combination_id_%s' % index))), ('active', '=', True)])
             try:
                 score = float((post.get('score_%s' % index) or '0').replace(',', '.') or 0)
-                choices.append({
-                    'priority': len(choices) + 1,
-                    'program_id': int(program_id),
-                    'method_id': int(method_id),
-                    'combination_id': int(post.get('combination_id_%s' % index) or 0) or False,
-                    'score': score,
-                })
             except ValueError:
+                score = None
+            if not program or not method or score is None:
                 raise ValidationError(_("Nguyện vọng %s có dữ liệu không hợp lệ.") % index)
+            choices.append({
+                'priority': len(choices) + 1,
+                'program_id': program.id,
+                'method_id': method.id,
+                'combination_id': combination.id or False,
+                'score': score,
+            })
         if not choices:
             raise ValidationError(_("Vui lòng chọn ít nhất một nguyện vọng xét tuyển."))
         return choices
@@ -288,8 +304,10 @@ class EautAdmissionPortal(CustomerPortal):
             steps=STATES,
             current_step=step_keys.index(app.state),
             missing=app._get_missing_items(),
+            graduation_label=dict(app._fields['graduation_status'].selection)[app.graduation_status],
             flash=self._pop_flash(),
         )
+        values.update(access_token=access_token, token=access_token, object=app)
         values = self._get_page_view_values(
             app, access_token, values, 'my_admission_history', True, **kw)
         return request.render('eaut_admission.portal_admission_detail', values)
@@ -318,11 +336,11 @@ class EautAdmissionPortal(CustomerPortal):
             return redirect
         env = request.env
         program = env['eaut.crm.admission.program'].sudo().search(
-            [('id', '=', int(program_id or 0)), ('active', '=', True)])
+            [('id', '=', self._to_int(program_id)), ('active', '=', True)])
         method = env['eaut.crm.admission.method'].sudo().search(
-            [('id', '=', int(method_id or 0)), ('active', '=', True)])
+            [('id', '=', self._to_int(method_id)), ('active', '=', True)])
         combination = env['eaut.crm.admission.combination'].sudo().search(
-            [('id', '=', int(combination_id or 0)), ('active', '=', True)])
+            [('id', '=', self._to_int(combination_id)), ('active', '=', True)])
         if not program or not method:
             self._flash(_("Vui lòng chọn ngành và phương thức xét tuyển."), 'danger')
             return self._back(app, access_token)
@@ -410,7 +428,7 @@ class EautAdmissionPortal(CustomerPortal):
         doc = app.document_ids.filtered(lambda d: d.id == doc_id)
         if not doc:
             raise NotFound()
-        stream = request.env['ir.binary']._get_stream_from(doc, 'file', 'file_name')
+        stream = request.env['ir.binary']._get_stream_from(doc, 'file', filename_field='file_name')
         return stream.get_response(as_attachment=True)
 
     # ---------------- Nộp lại & giấy xác nhận nhập học ----------------
