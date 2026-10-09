@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 
 from markupsafe import Markup
@@ -19,7 +20,6 @@ PERSONAL_FIELDS = [
     'school_name', 'graduation_year', 'id_number', 'id_issue_date',
     'id_issue_place', 'vneid_account', 'vneid_level',
 ]
-
 
 ACCEPTED_MESSAGE = (
     "Bạn đã được nhà trường chấp nhận hồ sơ. Bạn có thể đóng học phí để nhận "
@@ -46,7 +46,7 @@ class EautAdmissionApplication(models.Model):
         index=True,
         ondelete='restrict',
         tracking=True,
-    help='Tự tạo theo email khi thí sinh nộp hồ sơ; dùng để gửi thông báo và nhận trao đổi.',
+        help='Tự tạo theo email khi thí sinh nộp hồ sơ; dùng để gửi thông báo và nhận trao đổi.',
     )
     campaign_id = fields.Many2one(
         'eaut.crm.admission.campaign',
@@ -459,82 +459,81 @@ class EautAdmissionApplication(models.Model):
         self._sync_registrations()
         self._send_tracking_email()
 
-        def _format_submission_value(self, fname, value):
-            field = self._fields[fname]
-            if field.type == 'selection':
-                return dict(field._description_selection(self.env)).get(value, value)
-            return str(value)
+    def _format_submission_value(self, fname, value):
+        field = self._fields[fname]
+        if field.type == 'selection':
+            return dict(field._description_selection(self.env)).get(value, value)
+        return str(value)
 
-        def _build_submission_summary(self, vals, choices, documents):
-            """Nội dung form đã gửi ở dạng văn bản dễ đọc, để cán bộ đối chiếu giữa các lượt gửi."""
-            env = self.env
-            lines = [
-                '%s: %s' % (self._fields[fname].string, self._format_submission_value(fname, vals[fname]))
-                for fname in PERSONAL_FIELDS if vals.get(fname)
-            ]
-            for choice in choices or []:
-                program = env['eaut.crm.admission.program'].sudo().browse(choice['program_id'])
-                method = env['eaut.crm.admission.method'].sudo().browse(choice['method_id'])
-                combination = env['eaut.crm.admission.combination'].sudo().browse(choice.get('combination_id') or 0)
-                lines.append('Nguyện vọng %s: %s - %s - %s - điểm %s' % (
-                    choice.get('priority'), program.display_name, method.display_name,
-                    combination.display_name or '-', choice.get('score') or 0))
-            doc_labels = dict(DOC_TYPES)
-            for doc in documents or []:
-                lines.append('Tệp [%s]: %s' % (doc_labels.get(doc['doc_type']), doc['file_name']))
-            return '\n'.join(lines)
+    def _build_submission_summary(self, vals, choices, documents):
+        """Nội dung form đã gửi ở dạng văn bản dễ đọc, để cán bộ đối chiếu giữa các lượt gửi."""
+        env = self.env
+        lines = [
+            '%s: %s' % (self._fields[fname].string, self._format_submission_value(fname, vals[fname]))
+            for fname in PERSONAL_FIELDS if vals.get(fname)
+        ]
+        for choice in choices or []:
+            program = env['eaut.crm.admission.program'].sudo().browse(choice['program_id'])
+            method = env['eaut.crm.admission.method'].sudo().browse(choice['method_id'])
+            combination = env['eaut.crm.admission.combination'].sudo().browse(choice.get('combination_id') or 0)
+            lines.append('Nguyện vọng %s: %s - %s - %s - điểm %s' % (
+                choice.get('priority'), program.display_name, method.display_name,
+                combination.display_name or '-', choice.get('score') or 0))
+        doc_labels = dict(DOC_TYPES)
+        for doc in documents or []:
+            lines.append('Tệp [%s]: %s' % (doc_labels.get(doc['doc_type']), doc['file_name']))
+        return '\n'.join(lines)
 
-        def _log_submission(self, submit_type, form=None, vals=None, choices=None, documents=None, ip=None):
-            """Ghi lại 1 lượt gửi form. Không truyền vals thì lấy nội dung hiện tại của hồ sơ."""
-            self.ensure_one()
-            if vals is None:
-                vals = {fname: self[fname] for fname in PERSONAL_FIELDS}
-                choices = [{
-                    'priority': c.priority, 'program_id': c.program_id.id, 'method_id': c.method_id.id,
-                    'combination_id': c.combination_id.id, 'score': c.score,
-                } for c in self.choice_ids.sorted('priority')]
-                documents = [{'doc_type': d.doc_type, 'file_name': d.file_name} for d in self.document_ids]
-            return self.env['eaut.admission.submission'].sudo().create({
-                'application_id': self.id,
-                'submit_type': submit_type,
-                'form_id': (form or self.campaign_form_id).id,
-                'full_name': vals.get('full_name'),
-                'phone': vals.get('phone'),
-                'email': vals.get('email'),
-                'ip_address': ip,
-                'summary': self._build_submission_summary(vals, choices, documents),
-            })
+    def _log_submission(self, submit_type, form=None, vals=None, choices=None, documents=None, ip=None):
+        """Ghi lại 1 lượt gửi form. Không truyền vals thì lấy nội dung hiện tại của hồ sơ."""
+        self.ensure_one()
+        if vals is None:
+            vals = {fname: self[fname] for fname in PERSONAL_FIELDS}
+            choices = [{
+                'priority': c.priority, 'program_id': c.program_id.id, 'method_id': c.method_id.id,
+                'combination_id': c.combination_id.id, 'score': c.score,
+            } for c in self.choice_ids.sorted('priority')]
+            documents = [{'doc_type': d.doc_type, 'file_name': d.file_name} for d in self.document_ids]
+        return self.env['eaut.admission.submission'].sudo().create({
+            'application_id': self.id,
+            'submit_type': submit_type,
+            'form_id': (form or self.campaign_form_id).id,
+            'full_name': vals.get('full_name'),
+            'phone': vals.get('phone'),
+            'email': vals.get('email'),
+            'ip_address': ip,
+            'summary': self._build_submission_summary(vals, choices, documents),
+        })
 
-        def action_view_submissions(self):
-            self.ensure_one()
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _('Lượt gửi form'),
-                'res_model': 'eaut.admission.submission',
-                'view_mode': 'list,form',
-                'domain': [('application_id', '=', self.id)],
-            }
+    def action_view_submissions(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Lượt gửi form'),
+            'res_model': 'eaut.admission.submission',
+            'view_mode': 'list,form',
+            'domain': [('application_id', '=', self.id)],
+        }
 
+    def _send_tracking_email(self):
+        """Email xác nhận đã nhận hồ sơ, kèm nút 'Theo dõi hồ sơ' (link có token)."""
+        template = self.env.ref('eaut_admission.mail_template_application_received', raise_if_not_found=False)
+        if not template:
+            return
+        for rec in self.sudo().filtered('email'):
+            template.sudo().send_mail(rec.id, force_send=True, email_layout_xmlid='mail.mail_notification_light')
 
-        def _send_tracking_email(self):
-            """Email xác nhận đã nhận hồ sơ, kèm nút 'Theo dõi hồ sơ' (link có token)."""
-            template = self.env.ref('eaut_admission.mail_template_application_received', raise_if_not_found=False)
-            if not template:
-                return
-            for rec in self.sudo().filtered('email'):
-                template.sudo().send_mail(rec.id, force_send=True, email_layout_xmlid='mail.mail_notification_light')
-
-        def action_send_tracking_email(self):
-            """Gửi lại email theo dõi (khi thí sinh làm mất email hoặc nhập sai email)."""
-            for rec in self:
-                if not rec.email:
-                    raise UserError(_("Hồ sơ %s chưa có email thí sinh.") % rec.name)
-            self._send_tracking_email()
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {'message': _("Đã gửi email theo dõi hồ sơ."), 'type': 'success', 'sticky': False},
-            }
+    def action_send_tracking_email(self):
+        """Gửi lại email theo dõi (khi thí sinh làm mất email hoặc nhập sai email)."""
+        for rec in self:
+            if not rec.email:
+                raise UserError(_("Hồ sơ %s chưa có email thí sinh.") % rec.name)
+        self._send_tracking_email()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {'message': _("Đã gửi email theo dõi hồ sơ."), 'type': 'success', 'sticky': False},
+        }
 
     def action_start_review(self):
         self._check_state(['completed'])

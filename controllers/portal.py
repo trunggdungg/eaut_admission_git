@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import base64
 import os
 
@@ -18,6 +19,7 @@ DATE_FIELDS = ('date_of_birth', 'id_issue_date')
 REQUIRED_FORM_FIELDS = ['full_name', 'phone', 'email']
 # Giới hạn số tệp mỗi lần nộp để tránh lạm dụng form công khai
 MAX_FILES_PER_SUBMIT = 15
+
 
 class EautAdmissionPortal(CustomerPortal):
 
@@ -137,6 +139,7 @@ class EautAdmissionPortal(CustomerPortal):
         }
         values.update(extra)
         return values
+
     @staticmethod
     def _to_int(value):
         try:
@@ -144,14 +147,13 @@ class EautAdmissionPortal(CustomerPortal):
         except (TypeError, ValueError):
             return 0
 
-
     @staticmethod
     def _mask_email(email):
         name, _at, domain = (email or '').partition('@')
         return '%s***@%s' % (name[:2], domain) if domain else ''
 
     # =========================================================
-    # FORM CÔNG KHAI không cần tài khoản
+    # FORM CÔNG KHAI (không cần tài khoản)
     # =========================================================
 
     @route('/admission/apply', type='http', auth='public', website=True)
@@ -205,6 +207,8 @@ class EautAdmissionPortal(CustomerPortal):
             existing._log_submission(
                 'duplicate', form=form, vals=vals, choices=choices, documents=documents,
                 ip=request.httprequest.remote_addr)
+            existing._send_tracking_email()
+            return self._render_submitted(existing.name, existing.email)
 
         created = {}
 
@@ -222,40 +226,37 @@ class EautAdmissionPortal(CustomerPortal):
                 ip=request.httprequest.remote_addr)
             created['app'] = app
 
+        try:
+            with request.env.cr.savepoint():
+                _create()
+        except (ValidationError, UserError) as exc:
+            return _rerender(exc.args[0] if exc.args else str(exc))
+        return self._render_submitted(created['app'].name, created['app'].email)
+
+    def _parse_choices(self, post):
+        choices = []
+        max_choices = request.env['eaut.admission.application'].MAX_CHOICES
+        for index in range(1, max_choices + 1):
+            program_id = post.get('program_id_%s' % index)
+            method_id = post.get('method_id_%s' % index)
+            if not program_id and not method_id:
+                continue
+            if not program_id or not method_id:
+                raise ValidationError(
+                    _("Nguyện vọng %s cần chọn đủ ngành học và phương thức xét tuyển.") % index)
+            env = request.env
+            program = env['eaut.crm.admission.program'].sudo().search(
+                [('id', '=', self._to_int(program_id)), ('active', '=', True)])
+            method = env['eaut.crm.admission.method'].sudo().search(
+                [('id', '=', self._to_int(method_id)), ('active', '=', True)])
+            combination = env['eaut.crm.admission.combination'].sudo().search(
+                [('id', '=', self._to_int(post.get('combination_id_%s' % index))), ('active', '=', True)])
             try:
-                with request.env.cr.savepoint():
-                    _create()
-            except (ValidationError, UserError) as exc:
-                return _rerender(exc.args[0] if exc.args else str(exc))
-            return self._render_submitted(created['app'].name, created['app'].email)
-
-        def _parse_choices(self, post):
-            choices = []
-            max_choices = request.env['eaut.admission.application'].MAX_CHOICES
-            for index in range(1, max_choices + 1):
-                program_id = post.get('program_id_%s' % index)
-                method_id = post.get('method_id_%s' % index)
-                if not program_id and not method_id:
-                    continue
-                if not program_id or not method_id:
-                    raise ValidationError(
-                        _("Nguyện vọng %s cần chọn đủ ngành học và phương thức xét tuyển.") % index)
-                env = request.env
-                program = env['eaut.crm.admission.program'].sudo().search(
-                    [('id', '=', self._to_int(program_id)), ('active', '=', True)])
-                method = env['eaut.crm.admission.method'].sudo().search(
-                    [('id', '=', self._to_int(method_id)), ('active', '=', True)])
-                combination = env['eaut.crm.admission.combination'].sudo().search(
-                    [('id', '=', self._to_int(post.get('combination_id_%s' % index))), ('active', '=', True)])
-                try:
-                    score = float((post.get('score_%s' % index) or '0').replace(',', '.') or 0)
-
-                except ValueError:
-                    score = None
-                if not program or not method or score is None:
-                    raise ValidationError(_("Nguyện vọng %s có dữ liệu không hợp lệ.") % index)
-            if not choices:
-                raise ValidationError(_("Vui lòng chọn ít nhất một nguyện vọng xét tuyển."))
+                score = float((post.get('score_%s' % index) or '0').replace(',', '.') or 0)
+            except ValueError:
+                score = None
+            if not program or not method or score is None:
+                raise ValidationError(_("Nguyện vọng %s có dữ liệu không hợp lệ.") % index)
             choices.append({
                 'priority': len(choices) + 1,
                 'program_id': program.id,
@@ -263,31 +264,33 @@ class EautAdmissionPortal(CustomerPortal):
                 'combination_id': combination.id or False,
                 'score': score,
             })
-            return choices
+        if not choices:
+            raise ValidationError(_("Vui lòng chọn ít nhất một nguyện vọng xét tuyển."))
+        return choices
 
-        def _parse_documents(self):
-            documents = []
-            for doc_type, _label in DOC_TYPES:
-                uploads = [
-                    f for f in request.httprequest.files.getlist('file_%s' % doc_type) if f and f.filename
-                ]
-                if doc_type in SINGLE_DOC_TYPES:
-                    uploads = uploads[:1]
-                for upload in uploads:
-                    filename, data = self._read_upload(upload)
-                    documents.append({'doc_type': doc_type, 'file': data, 'file_name': filename})
-            if len(documents) > MAX_FILES_PER_SUBMIT:
-                raise ValidationError(_("Chỉ được tải lên tối đa %s tệp.") % MAX_FILES_PER_SUBMIT)
-            return documents
+    def _parse_documents(self):
+        documents = []
+        for doc_type, _label in DOC_TYPES:
+            uploads = [
+                f for f in request.httprequest.files.getlist('file_%s' % doc_type) if f and f.filename
+            ]
+            if doc_type in SINGLE_DOC_TYPES:
+                uploads = uploads[:1]
+            for upload in uploads:
+                filename, data = self._read_upload(upload)
+                documents.append({'doc_type': doc_type, 'file': data, 'file_name': filename})
+        if len(documents) > MAX_FILES_PER_SUBMIT:
+            raise ValidationError(_("Chỉ được tải lên tối đa %s tệp.") % MAX_FILES_PER_SUBMIT)
+        return documents
 
-        def _render_submitted(self, name, email):
-            return request.render('eaut_admission.admission_submitted', {
-                'application_name': name,
-                'email_hint': self._mask_email(email),
-            })
+    def _render_submitted(self, name, email):
+        return request.render('eaut_admission.admission_submitted', {
+            'application_name': name,
+            'email_hint': self._mask_email(email),
+        })
 
     # =========================================================
-    # CHI TIẾT HỒ SƠ
+    # TRANG THEO DÕI HỒ SƠ (link trong email, có access_token)
     # =========================================================
 
     @route('/my/admission/<int:app_id>', type='http', auth='public', website=True)
@@ -323,9 +326,7 @@ class EautAdmissionPortal(CustomerPortal):
             self._flash(_("Đã lưu thông tin."))
         return self._back(app, access_token)
 
-    # =========================================================
-    # NGUYỆN VỌNG
-    # =========================================================
+    # ---------------- Nguyện vọng ----------------
 
     @route('/my/admission/<int:app_id>/choice/add', type='http', auth='public', website=True, methods=['POST'])
     def portal_admission_choice_add(self, app_id, access_token=None, program_id=None, method_id=None,
@@ -373,23 +374,19 @@ class EautAdmissionPortal(CustomerPortal):
         if redirect:
             return redirect
         app.choice_ids.filtered(lambda c: c.id == choice_id).unlink()
-        # Đánh lại thứ tự nguyện vọng cho liên tục
         for index, choice in enumerate(app.choice_ids.sorted('priority'), start=1):
             if choice.priority != index:
                 choice.priority = index
         self._flash(_("Đã xóa nguyện vọng."))
         return self._back(app, access_token)
 
-    # =========================================================
-    # TÀI LIỆU
-    # =========================================================
+    # ---------------- Tài liệu ----------------
 
     @route('/my/admission/<int:app_id>/upload', type='http', auth='public', website=True, methods=['POST'])
     def portal_admission_upload(self, app_id, access_token=None, doc_type=None, **post):
         app, redirect = self._get_editable_application(app_id, access_token)
         if redirect:
             return redirect
-
         upload = request.httprequest.files.get('file')
         if doc_type not in dict(DOC_TYPES) or not upload or not upload.filename:
             self._flash(_("Vui lòng chọn loại giấy tờ và tệp cần tải lên."), 'danger')
@@ -434,9 +431,7 @@ class EautAdmissionPortal(CustomerPortal):
         stream = request.env['ir.binary']._get_stream_from(doc, 'file', filename_field='file_name')
         return stream.get_response(as_attachment=True)
 
-    # =========================================================
-    # NỘP HỒ SƠ & GIẤY XÁC NHẬN NHẬP HỌC
-    # =========================================================
+    # ---------------- Nộp lại & giấy xác nhận nhập học ----------------
 
     @route('/my/admission/<int:app_id>/submit', type='http', auth='public', website=True, methods=['POST'])
     def portal_admission_submit(self, app_id, access_token=None, **kw):
