@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Odoo 19: nhóm quyền gom theo "privilege" để hiện đúng mục "Tuyển sinh" trong form Người dùng -->
+    <record id="res_groups_privilege_admission" model="res.groups.privilege">
+        <field name="name">Tuyển sinh</field>
+        <field name="sequence">30</field>
+        <field name="category_id" ref="base.module_category_services"/>
+    </record>
+
     <!-- Cán bộ phòng đào tạo: kiểm tra, yêu cầu bổ sung, chấp nhận/từ chối hồ sơ -->
     <record id="group_admission_officer" model="res.groups">
-        <field name="name">Tuyển sinh: Cán bộ phòng đào tạo</field>
+        <field name="name">Cán bộ phòng đào tạo</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" ref="res_groups_privilege_admission"/>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
-    <!-- Trưởng phòng: toàn quyền, kể cả xóa hồ sơ -->
+    <!-- Trưởng phòng: toàn quyền, kể cả xóa hồ sơ. Admin hệ thống được gán sẵn để thấy menu ngay sau khi cài -->
     <record id="group_admission_manager" model="res.groups">
-        <field name="name">Tuyển sinh: Quản lý</field>
+        <field name="name">Quản lý</field>
+        <field name="sequence">20</field>
+        <field name="privilege_id" ref="res_groups_privilege_admission"/>
         <field name="implied_ids" eval="[(4, ref('group_admission_officer'))]"/>
+        <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
     </record>
 </odoo>

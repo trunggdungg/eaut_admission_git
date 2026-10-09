@@ -14,3 +14,8 @@ access_eaut_crm_method_admission_officer,eaut.crm.admission.method.admission.off
 access_eaut_crm_combination_admission_officer,eaut.crm.admission.combination.admission.officer,eaut_crm.model_eaut_crm_admission_combination,group_admission_officer,1,0,0,0
 access_eaut_admission_submission_officer,eaut.admission.submission.officer,model_eaut_admission_submission,group_admission_officer,1,0,0,0
 access_eaut_admission_submission_manager,eaut.admission.submission.manager,model_eaut_admission_submission,group_admission_manager,1,0,0,1
+access_eaut_crm_stage_admission_officer,eaut.crm.stage.admission.officer,eaut_crm.model_eaut_crm_stage,group_admission_officer,1,0,0,0
+access_eaut_crm_source_admission_officer,eaut.crm.source.admission.officer,eaut_crm.model_eaut_crm_source,group_admission_officer,1,0,0,0
+access_eaut_crm_tag_admission_officer,eaut.crm.tag.admission.officer,eaut_crm.model_eaut_crm_tag,group_admission_officer,1,0,0,0
+access_eaut_crm_sale_team_admission_officer,eaut.crm.sale.team.admission.officer,eaut_crm.model_eaut_crm_sale_team,group_admission_officer,1,0,0,0
+access_eaut_crm_additional_contact_admission_officer,eaut.crm.additional.contact.admission.officer,eaut_crm.model_eaut_crm_additional_contact,group_admission_officer,1,0,0,0
