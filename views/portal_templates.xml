@@ -232,12 +232,7 @@
     <template id="portal_admission_detail" name="Portal tuyển sinh: chi tiết hồ sơ">
         <t t-call="portal.portal_layout">
             <div class="container mb-5">
-                <h3>
-                    <span t-out="app.name"/>
-                    -
-                    <span t-out="app.campaign_id.name"/>
-                </h3>
-
+                 <h3 class="mt-3"><span t-out="app.name"/> - <span t-out="app.campaign_id.name"/></h3>
                 <t t-call="eaut_admission.portal_admission_flash"/>
 
                 <!-- 4 bước trạng thái hồ sơ -->
@@ -286,7 +281,7 @@
                     </p>
                     <p class="mb-1">
                         Tốt nghiệp THPT:
-                        <strong t-out="dict(app._fields['graduation_status'].selection)[app.graduation_status]"/>
+                     <strong t-out="graduation_label"/>
                     </p>
                     <a t-if="app.admission_letter_available"
                        t-attf-href="/my/admission/#{app.id}/letter?access_token=#{access_token}"

@@ -35,7 +35,7 @@
                         theo dõi hồ sơ:
                     </p>
                     <p style="margin: 16px 0;">
-                        <a t-att-href="object._get_tracking_url()"
+                            <a t-att-href="object.get_tracking_url()"
                            style="background-color: #875A7B; padding: 10px 18px; text-decoration: none; color: #ffffff; border-radius: 5px; display: inline-block;">
                             Theo dõi hồ sơ
                         </a>
